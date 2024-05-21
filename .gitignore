@@ -1,0 +1,14 @@
+./node_modules
+node_modules/
+.env
+.zip
+*.zip
+
+./combined.log
+combined.log
+error.log
+./error.log
+.sql
+*.sql
+.log
+*.log
