@@ -233,6 +233,16 @@ const GameController = {
     }
   },
 
+  getCartelas: async (req, res, next) => {
+    try {
+      const cards = cardData.map((card, index) => ({ no: (index + 1), card }));
+      res.status(200).json(cards)
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  },
+
   getCurrentGame: async (req, res) => {
     let { shopId } = req.params;
 

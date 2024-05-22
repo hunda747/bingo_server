@@ -10,6 +10,7 @@ const router = express.Router();
 // Games Routes
 router.get('/', gameController.getAllGames);
 router.get('/searchGame', gameController.searchGame);
+router.get('/getCartelas', gameController.getCartelas);
 router.get('/:gameId', gameController.getGameById);
 router.post('/', gameController.createGame);
 // router.get('/getSpinRecentResult', gameController.getSpinRecentResult);
