@@ -14,9 +14,9 @@ router.get('/:id', slipController.getSlipById);
 router.get('/getCashierReport/:shopId', slipController.generateCashierReport);
 router.get('/recallBetsReport/:cashierId', slipController.recallBetsReport);
 router.post('/', slipController.createSlip);
-router.put('/:id', slipController.updateSlip);
-router.put('/cancelslip/:id', slipController.cancelSlip);
+router.put('/cancelslip', slipController.cancelSlip);
 router.put('/redeem/:id/:shop/:cashId', slipController.redeemSlip);
+router.put('/:id', slipController.updateSlip);
 router.delete('/:id', slipController.deleteSlip);
 
 module.exports = router;

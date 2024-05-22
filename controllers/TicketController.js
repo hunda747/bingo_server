@@ -55,7 +55,7 @@ const ticketController = {
         .withGraphFetched("shop")
         .withGraphFetched("game")
         .orderBy("created_at", "desc")
-        .limit(100);
+        .limit(50);
 
       slips.forEach((slip) => {
         slip.card = getBingoCard(slip.pickedNumber);
@@ -308,42 +308,38 @@ const ticketController = {
   },
 
   cancelSlip: async (req, res, next) => {
-    const { id } = req.params;
+    // const { id } = req.params;
+    const { gameId, cartela } = req.query;
     // const { gameId, cartela } = req.params;
-
+    console.log('input', gameId, cartela);
     try {
       await transaction(Game.knex(), async (trx) => {
         try {
-
-          const slipCurrent = await Slip.query()
-            .where("id", id)
-            .where("status", "active")
-            .first();
-          if (!slipCurrent) {
-            return res.status(404).json({ message: "Slip not found." });
-          }
-          let gameId = slipCurrent.gameId;
-          const currentGame = await Game.query()
-            .where("id", gameId)
-            .where("status", "pending")
-            .first();
+          // Find the game
+          const currentGame = await Game.query().findById(gameId);
           if (!currentGame) {
-            return res.status(404).json({ message: "Game not found." });
+            return res.status(404).json({ message: 'Game not found' });
           }
 
-          const updatedSlip = await Slip.query().patchAndFetchById(id, {
+          const ticket = await Slip.query().where({ gameId: gameId }).andWhere({ "pickedNumber": cartela.toString() }).andWhere({ status: 'active' }).first();
+
+          if (!ticket) {
+            return res.status(404).json({ message: `Cartela #${cartela} was not selected` });
+          }
+
+          const updatedSlip = await Slip.query().patchAndFetchById(ticket.id, {
             status: "canceled",
           });
 
           if (updatedSlip) {
-            await deleteSlipLock(trx, gameId, slipCurrent.pickedNumber, SLIPLOCK);
-            res.json({ message: "Slip canced!" });
+            await deleteSlipLock(trx, gameId, ticket.pickedNumber, SLIPLOCK);
+            res.json({ message: `Cartela #${cartela} is canceled` });
           } else {
-            res.status(404).json({ err: "false", error: "Slip not found 4" });
+            res.status(404).json({ err: "false", error: "Slip not found" });
           }
         } catch (error) {
           console.log('rollbakc', error);
-          trx.rollback();
+          // trx.rollback();
           throw Error(error)
         }
       })

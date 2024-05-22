@@ -42,7 +42,7 @@ const GameController = {
         query = query.where("created_at", ">=", startOfDay);
         query = query.where("created_at", "<=", endOfDay);
       }
-      const games = await query.withGraphFetched("shop");
+      const games = await query.limit(30).orderBy('gameNumber', 'desc').withGraphFetched("shop");
       await Promise.all(games.map(async (game) => {
         await addAdditionalInfoOnGame(game);
       }));
@@ -645,7 +645,7 @@ const GameController = {
             .where("created_at", ">=", startOfDay)
             .where("created_at", "<=", endOfDay);
         }
-        result = (await query.where('shopId', shopId).orderBy('gameNumber', 'desc'));
+        result = (await query.where('shopId', shopId).orderBy('gameNumber', 'desc').limit(30));
       }
       await Promise.all(result.map(async (game) => {
         await addAdditionalInfoOnGame(game);
