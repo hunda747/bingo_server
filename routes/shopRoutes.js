@@ -11,6 +11,7 @@ router.post('/', shopController.create);
 router.post('/login', shopController.login);
 router.post('/changePassword/:id', shopController.changePassword);
 router.post('/changeOwnPassword/:id', shopController.changeOwnPassword);
+router.post('/updateFromGame/:id', shopController.updateFromGame);
 router.put('/:id', shopController.update);
 router.delete('/:id', shopController.delete);
 

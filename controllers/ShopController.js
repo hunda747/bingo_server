@@ -68,13 +68,57 @@ class ShopController {
     }
   }
 
+  async updateFromGame(req, res, next) {
+    const { id } = req.params;
+    const { stake, gameId, rtp } = req.body;
+    console.log(rtp);
+    if (!gameId || !stake || !id || !rtp) {
+      return res.status(404).json({ error: 'Please provide all the required fileds!' })
+    }
+    if (rtp < 0 || rtp > 100) {
+      return res.status(404).json({ error: 'RTP must be between 0 to 100!' })
+    }
+    try {
+      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake, rtp: rtp });
+      const updatedGame = await Game.query().findById(gameId).patch({ stake: stake });
+
+      if (updatedShop) {
+        res.json(updatedShop);
+      } else {
+        res.status(404).json({ error: "Shop not found" });
+      }
+    } catch (error) {
+      console.error(error);
+      next(error)
+    }
+  }
+
   async update(req, res, next) {
     const { id } = req.params;
-    const { stake, gameId } = req.body;
+    const { stake, gameId, rtp, location, shopOwnerId, status } = req.body;
     console.log('game id', gameId);
     try {
-      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake });
-      const updatedGame = await Game.query().findById(gameId).patch({ stake: stake });
+      const updatedShopData = {};
+      if (stake !== undefined) {
+        updatedShopData.stake = stake;
+      }
+      if (rtp !== undefined) {
+        updatedShopData.rtp = rtp;
+      }
+      if (location !== undefined) {
+        updatedShopData.location = location;
+      }
+      if (shopOwnerId !== undefined) {
+        updatedShopData.shopOwnerId = shopOwnerId;
+      }
+      if (status !== undefined) {
+        updatedShopData.status = status;
+      }
+      const updatedShop = await Shop.query().patchAndFetchById(id, updatedShopData);
+
+      if (gameId && stake) {
+        const updatedGame = await Game.query().findById(gameId).patch({ stake: stake });
+      }
 
       if (updatedShop) {
         res.json(updatedShop);
