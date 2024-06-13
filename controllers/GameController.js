@@ -18,8 +18,6 @@ const { stringify } = require("uuid");
 const GameWinner = require("../models/gameWinner");
 const { addAdditionalInfoOnGame } = require("../utill/gameUtill");
 
-const KENOLOCK = 'game_lock_keno'
-const SPINLOCK = 'game_lock_spin'
 const BINGOLOCK = 'bingo_lock'
 
 const GameController = {
@@ -86,7 +84,7 @@ const GameController = {
         }
         const shop = await Shop.query().findById(shopId);
         await checkRepeatNumber(trx, shopId, newGameNumber, BINGOLOCK);
-        const newGame = await Game.query().insert({ gameNumber: newGameNumber, shopId, stake: shop.stake });
+        const newGame = await Game.query().insert({ gameNumber: newGameNumber, shopId, stake: shop.stake, rtp: shop.rtp, gameType: shop.gameType });
         res.send(newGame);
       })
     } catch (error) {
@@ -165,6 +163,10 @@ const GameController = {
 
     if (updatedGameData.hasOwnProperty("status")) {
       updateQuery.status = updatedGameData.status;
+    }
+
+    if (updatedGameData.hasOwnProperty("gameType")) {
+      updateQuery.gameType = updatedGameData.gameType;
     }
 
     try {
@@ -261,7 +263,7 @@ const GameController = {
         }
         const shop = await Shop.query().findById(shopId);
         // await checkRepeatNumber(trx, shopId, newGameNumber, BINGOLOCK);
-        const newGame = await Game.query().insert({ gameNumber: newGameNumber, shopId, stake: shop.stake });
+        const newGame = await Game.query().insert({ gameNumber: newGameNumber, shopId, stake: shop.stake, rtp: shop.rtp, gameType: shop.gameType });
 
         const cards = cardData.map((card, index) => ({ no: (index + 1), card }));
         return res.status(200).json({ message: "active", game: newGame, stage: 'pending', cartela: cards });
@@ -282,345 +284,6 @@ const GameController = {
       logger.error(`Error getting current game result: ${error}`);
       return res.status(500).json({ error: error?.message || "Internal server error." });
     }
-  },
-
-  getCurrentGameResultFalse: async (req, res) => {
-    let { gameNumber, shopId } = req.body;
-    // console.log('game', gameNumber);
-    try {
-      // Validate input
-      if (!gameNumber || !shopId) {
-        return res.status(400).json({ error: "Invalid input data." });
-      }
-
-      // Acquire lock
-      const release = await acquireLockWithTimeout(gameMutex, 5000);
-      if (!release) {
-        logger.error(`Failed to acquire lock. for shop: ${shopId} gameNumber: ${gameNumber}`)
-        return res.status(500).json({ error: "Failed to acquire lock." });
-      }
-
-      // Start transaction
-      await transaction(Game.knex(), async (trx) => {
-        // Check shop existence
-        const findShop = await Shop.query().findOne({ username: shopId });
-        if (!findShop) {
-          release();
-          return res.status(404).json({ error: "Shop not found." });
-        }
-
-        shopId = findShop.id;
-
-        // Retrieve current game
-        const currentGame = await Game.query()
-          .findOne({ id: gameNumber, gameType: 'keno', shopId, status: 'playing' })
-          // .findOne({ gameType: 'keno', shopId, status: 'playing' })
-          // .orderBy("id", "desc")
-          .forUpdate();
-
-        if (!currentGame) {
-          logger.error(`current game not found keno for shop: ${findShop?.username}`);
-          release();
-          return res.status(404).json({ error: "Game not found." });
-        }
-
-        let response;
-        if (!currentGame.pickedNumbers) {
-          // Generate random numbers securely
-          const numbers = await generateRandomNumbersKeno(gameNumber, findShop.rtp, shopId, res);
-
-          // Update game with drawn numbers
-          let headsCount = 0;
-          let tailsCount = 0;
-
-          for (const num of numbers) {
-            if (num >= 1 && num <= 40) {
-              headsCount++;
-            } else if (num >= 41 && num <= 80) {
-              tailsCount++;
-            }
-          }
-
-          const winner = headsCount > tailsCount ? "heads" : tailsCount > headsCount ? "tails" : "tails";
-
-          // Update game
-          await currentGame.$query(trx).patch({
-            pickedNumbers: JSON.stringify({ selection: numbers }),
-            status: "done",
-            winner: winner
-          });
-
-          const newGameNumber = currentGame.gameNumber + 1;
-          // await trx.raw(`
-          //   CREATE TABLE IF NOT EXISTS game_lock (
-          //     game_number VARCHAR(255) PRIMARY KEY
-          //   );
-          // `);
-
-          const lockAcquired = await trx.raw(`
-            INSERT INTO game_lock (game_number) VALUES ('${getTodayDate() + '_' + currentGame.gameType + '_' + shopId.toString() + '_' + (newGameNumber).toString()}');
-          `);
-
-          if (lockAcquired.length === 0) {
-            // Lock could not be acquired (handle conflict)
-            release();
-            logger.error(`Failed to acquire lock for game: ${gameNumber} in SHop: ${shopId}`);
-            return res.status(409).json({ error: "Conflict detected. Please try again." }); // Or retry logic
-          }
-          // Create new game
-          const newGame = await Game.query(trx).insert({
-            gameType: "keno",
-            gameNumber: newGameNumber,
-            shopId
-          }).returning("*");
-
-          let finalgameobject = await finalResult(currentGame, numbers)
-          const last10Result = await getLast10Games(shopId);
-          last10Result.unshift(finalgameobject);
-
-          // Calculate winning numbers
-          calculateWiningNumbers(gameNumber, numbers, winner);
-
-          response = {
-            openGame: { id: newGame.id, gameNumber: newGame.gameNumber },
-            game: { gameNumber: currentGame.gameNumber },
-            result: numbers.map((item) => ({ value: item })),
-            lastGame: currentGame.gameNumber,
-            recent: last10Result
-          };
-        } else {
-          release();
-          logger.error(`Game with picked number on game id: ${gameNumber}, shop id: ${shopId}`)
-          return res.status(404).json({ error: "Game not found." });
-        }
-
-        // Release lock and respond with data
-        release();
-        return res.status(200).json(response);
-      });
-    } catch (error) {
-      logger.error(`Error getting current game result: ${error}`);
-      return res.status(500).json({ error: "Internal server error." });
-    }
-  },
-
-  getCurrentGameResultOld: async (req, res) => {
-    let { gameNumber, shopId } = req.body;
-    // console.log(gameNumber);
-    try {
-      // const release = await gameMutex.acquire();
-      const release = await acquireLockWithTimeout(gameMutex, 5000);
-      try {
-        if (!shopId) {
-          return res.status(404).json({ error: "No active games currently." });
-        }
-        const findshop = await Shop.query().where("username", shopId).first();
-        if (!findshop) {
-          return res.status(404).json({ error: "No active games currently." });
-        }
-        shopId = findshop.id;
-        let response;
-        // Update the current game with the drawn number
-        // Wrap critical operations within a transaction
-        await transaction(Game.knex(), async (trx) => {
-          // const currentGame = await Game.query().where("id", gameNumber).andWhere('gameType', 'keno').andWhere('shopId', shopId).first();
-          const currentGame = await Game.query().where("status", "playing").andWhere('gameType', 'keno').andWhere('shopId', shopId).first();
-
-          if (!currentGame) {
-            return res.status(404).json({ error: "No active games currently." });
-          }
-          // console.log("result:", currentGame);
-          let drawnNumber;
-          if (!currentGame.pickedNumbers) {
-            // Assume you have a function to draw the number and update the database
-            const numbers = await generateRandomNumbersKeno(gameNumber, findshop.rtp, shopId, res);
-            drawnNumber = numbers;
-
-            let headsCount = 0;
-            let tailsCount = 0;
-            let evenCount = 0;
-
-            for (const num of numbers) {
-              if (num <= 40) {
-                evenCount++;
-                // Assuming heads for even numbers, tails for odd numbers
-                headsCount++;
-              } else {
-                tailsCount++;
-              }
-            }
-            // const drawnNumber = this.generateRandomNumbers();
-            const winner =
-              headsCount > tailsCount
-                ? "heads"
-                : tailsCount > headsCount
-                  ? "tails"
-                  : "evens";
-            // Update the pickedNumbers field with the drawn number
-            await currentGame.$query().patch({
-              pickedNumbers: JSON.stringify({ selection: drawnNumber }),
-              status: "done",
-              winner: winner,
-            });
-
-            calculateWiningNumbers(gameNumber, drawnNumber, winner);
-          } else {
-            // console.log('resultPA:', );
-            drawnNumber = JSON.parse(currentGame?.pickedNumbers)?.selection;
-          }
-          // calculateWiningNumbers(drawnNumber, gameNumber);
-
-          // Retrieve the previous game
-          const previousGame = await Game.query()
-            .where("status", "done")
-            .andWhere("gameType", "keno")
-            .andWhere('shopId', shopId)
-            .orderBy("id", "desc")
-            .offset(1)
-            .first();
-
-          let openGame;
-          // Update the current game with the drawn number
-          const newGame = await Game.query()
-            .where("status", "playing")
-            .andWhere("gameType", "keno")
-            .andWhere('shopId', shopId)
-            .orderBy("id", "desc")
-            .first();
-
-          if (newGame) {
-            openGame = newGame;
-          } else {
-            openGame = await Game.query()
-              .insert({
-                gameType: "keno",
-                gameNumber: currentGame.gameNumber + 1,
-                shopId: shopId
-                // Add other fields as needed based on your table structure
-                // Example: pickedNumbers, winner, time, status, etc.
-              })
-              .returning("*");
-          }
-
-          // Construct the response in the specified format
-          response = {
-            openGame: { id: openGame.id, gameNumber: openGame.gameNumber },
-            game: { gameNumber: currentGame.gameNumber },
-            result: drawnNumber.map((item) => ({ value: item })),
-            lastGame: previousGame ? previousGame.gameNumber : null,
-            recent: await getLast10Games(shopId),
-          };
-          release();
-        })
-        // Respond with the updated game data
-        return res.status(200).json(response);
-      } catch (error) {
-        console.error("Error getting current game result:", error);
-        return res.status(500).json({ error: "Internal server error." });
-      } finally {
-        // Release the lock when the critical section is done
-        if (release) {
-          release();
-        } else {
-          console.log('no time out keno');
-        }
-      }
-    } catch (error) {
-      // Handle timeout error
-      if (error instanceof knex.KnexTimeoutError) {
-        // throw new Error('Failed to acquire lock within the specified timeout');
-        logger.error('Failed to acquire lock within the specified timeout');
-        return res.status(500).json({ error: "Internal server error." });
-      }
-      // Handle other errors
-      // throw error;
-      logger.error(error);
-      return res.status(500).json({ error: "Internal server error." });
-    }
-  },
-
-  resetGameNumber: async () => {
-    const shops = await Shop.query();
-
-    shops.map(async (shop) => {
-      const currentGame = await Game.query().where("status", "playing").andWhere('gameType', 'keno').andWhere('shopId', shop.id).orderBy("id", "desc").first();
-
-      if (currentGame) {
-        const numbers = await generateRandomNumbersKeno(currentGame.id, shop.rtp, shop.id);
-
-        let headsCount = 0;
-        let tailsCount = 0;
-        let evenCount = 0;
-
-        for (const num of numbers) {
-          if (num <= 40) {
-            evenCount++;
-            // Assuming heads for even numbers, tails for odd numbers
-            headsCount++;
-          } else {
-            tailsCount++;
-          }
-        }
-        // const drawnNumber = this.generateRandomNumbers();
-        const winner =
-          headsCount > tailsCount
-            ? "heads"
-            : tailsCount > headsCount
-              ? "tails"
-              : "evens";
-        // Update the pickedNumbers field with the drawn number
-        await currentGame.$query().patch({
-          pickedNumbers: JSON.stringify({ selection: numbers }),
-          status: "done",
-          winner: winner,
-        });
-        // console.log('keno', currentGame);
-
-        calculateWiningNumbers(currentGame.id, numbers, winner);
-      } else {
-        console.log('No game');
-      }
-
-      const openGame = await Game.query()
-        .insert({
-          gameType: "keno",
-          gameNumber: shop.kenoStartNumber,
-          shopId: shop.id
-          // Add other fields as needed based on your table structure
-          // Example: pickedNumbers, winner, time, status, etc.
-        })
-
-      const currentGameSpin = await Game.query().where("status", "playing").andWhere('gameType', 'spin').andWhere('shopId', shop.id).orderBy("id", "desc").first();
-
-      if (currentGameSpin) {
-        const drawnNumber = await generateSpinRandomNumbers(currentGameSpin.id, shop.spinRtp, shop.id)
-        // console.log('ddraw', drawnNumber);
-
-        const winners = determineAllWinners(drawnNumber);
-        // console.log(winners);
-        // Update the pickedNumbers field with the drawn number
-        await currentGameSpin.$query().patch({
-          pickedNumbers: JSON.stringify({ selection: drawnNumber }),
-          status: "done",
-        });
-        // console.log('spinres', cu);
-
-        calculateSlipWiningNumbers(currentGame.id, drawnNumber, winners);
-      } else {
-        console.log(" no smin game");
-      }
-
-      const openGameSpin = await Game.query()
-        .insert({
-          gameType: "spin",
-          gameNumber: shop.spinStartNumber,
-          shopId: shop.id
-          // Add other fields as needed based on your table structure
-          // Example: pickedNumbers, winner, time, status, etc.
-        })
-    })
-
-    return true;
   },
 
   searchGame: async (req, res) => {
@@ -729,8 +392,6 @@ const GameController = {
     }
   },
 };
-
-
 
 function getStartAndEndOfDay(timezoneOffset) {
   const reportDate = new Date().toISOString().substr(0, 10);

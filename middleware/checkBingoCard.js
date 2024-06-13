@@ -1,4 +1,23 @@
-function isWinner(cardData, drawnNumbers) {
+const { Option } = require("./gameOption");
+
+function isWinner(cardData, drawnNumbers, gameType) {
+  console.log("card", cardData);
+  console.log("drawNumbers", drawnNumbers);
+  console.log("option", gameType);
+  const line = Option[gameType] || 2;
+  console.log("option: ", line);
+  const { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount } = getWinningRows(cardData, drawnNumbers, line)
+  // Check for combinations (horizontal + vertical, diagonal + vertical, etc.)
+  if (parseInt(horizontalCount + verticalCount + mainDiagonalCount + secondaryDiagonalCount) >= line) {
+    return true;
+  }
+
+  // No winning condition met
+  return false;
+}
+
+const getWinningRows = (cardData, drawnNumbers, line) => {
+  console.log("line", line);
   let horizontalCount = 0;
   let verticalCount = 0;
   let mainDiagonalCount = 0;
@@ -15,8 +34,8 @@ function isWinner(cardData, drawnNumbers) {
     }
     if (markedCount === 5) {
       horizontalCount++;
-      if (horizontalCount >= 2) {
-        return true;
+      if (horizontalCount >= line) {
+        return { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount }
       }
     }
   }
@@ -32,8 +51,8 @@ function isWinner(cardData, drawnNumbers) {
     }
     if (markedCount === 5) {
       verticalCount++;
-      if (verticalCount >= 2) {
-        return true;
+      if (verticalCount >= line) {
+        return { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount }
       }
     }
   }
@@ -45,8 +64,8 @@ function isWinner(cardData, drawnNumbers) {
     drawnNumbers.includes(cardData['G'][3]) &&
     drawnNumbers.includes(cardData['O'][4])) {
     mainDiagonalCount++;
-    if (mainDiagonalCount >= 2) {
-      return true;
+    if (mainDiagonalCount >= line) {
+      return { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount }
     }
   }
 
@@ -56,8 +75,8 @@ function isWinner(cardData, drawnNumbers) {
     drawnNumbers.includes(cardData['G'][1]) &&
     drawnNumbers.includes(cardData['O'][0])) {
     secondaryDiagonalCount++;
-    if (secondaryDiagonalCount >= 2) {
-      return true;
+    if (secondaryDiagonalCount >= line) {
+      return { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount }
     }
   }
   console.log('hor', horizontalCount)
@@ -65,25 +84,9 @@ function isWinner(cardData, drawnNumbers) {
   console.log('dia: ', mainDiagonalCount, ' : ', secondaryDiagonalCount)
 
   console.log('sum', (horizontalCount + verticalCount + mainDiagonalCount + secondaryDiagonalCount))
-  // Check for combinations (horizontal + vertical, diagonal + vertical, etc.)
-  if (parseInt(horizontalCount + verticalCount + mainDiagonalCount + secondaryDiagonalCount) >= 2) {
-    return true;
-  }
 
-  // No winning condition met
-  return false;
+  return { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount }
 }
-
-// Example usage
-const cardData = {
-  "B": [5, 10, 12, 7, 1],
-  "I": [16, 18, 20, 23, 24],
-  "N": [36, 39, null, 42, 44], // Free center space marked as null
-  "G": [55, 52, 48, 50, 54],
-  "O": [70, 68, 64, 61, 75]
-};
-
-const drawnNumbers = [5, 10, 12, 7, 1, 16, 18, 20, 23, 50, 24]; // Sample drawn numbers
 
 // console.log(isWinner(cardData, drawnNumbers)); // Output: true (this card is a winner with 1 horizontal and 1 vertical line)
 module.exports = { isWinner };

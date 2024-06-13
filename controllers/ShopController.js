@@ -70,7 +70,7 @@ class ShopController {
 
   async updateFromGame(req, res, next) {
     const { id } = req.params;
-    const { stake, gameId, rtp } = req.body;
+    const { stake, gameId, rtp, gameType } = req.body;
     console.log(rtp);
     if (!gameId || !stake || !id || !rtp) {
       return res.status(404).json({ error: 'Please provide all the required fileds!' })
@@ -79,8 +79,8 @@ class ShopController {
       return res.status(404).json({ error: 'RTP must be between 0 to 100!' })
     }
     try {
-      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake, rtp: rtp });
-      const updatedGame = await Game.query().findById(gameId).patch({ stake: stake });
+      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake, rtp: rtp, gameType });
+      const updatedGame = await Game.query().findById(gameId).patch({ stake: stake, gameType });
 
       if (updatedShop) {
         res.json(updatedShop);
@@ -95,7 +95,7 @@ class ShopController {
 
   async update(req, res, next) {
     const { id } = req.params;
-    const { stake, gameId, rtp, location, shopOwnerId, status } = req.body;
+    const { stake, gameId, rtp, location, shopOwnerId, status, gameType } = req.body;
     console.log('game id', gameId);
     try {
       const updatedShopData = {};
@@ -114,10 +114,13 @@ class ShopController {
       if (status !== undefined) {
         updatedShopData.status = status;
       }
+      if (gameType !== undefined) {
+        updatedShopData.gameType = gameType;
+      }
       const updatedShop = await Shop.query().patchAndFetchById(id, updatedShopData);
 
       if (gameId && stake) {
-        const updatedGame = await Game.query().findById(gameId).patch({ stake: stake });
+        const updatedGame = await Game.query().findById(gameId).patch({ stake: stake, gameType: gameType });
       }
 
       if (updatedShop) {

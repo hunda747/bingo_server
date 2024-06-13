@@ -18,7 +18,6 @@ router.get('/drawNumberForGame/:gameId', gameController.drawNumberForGame);
 router.get('/activateGame/:gameId', gameController.activateGame);
 router.get('/closeGame/:gameId', gameController.closeGame);
 router.get('/getCurrentGame/:shopId', gameController.getCurrentGame);
-router.post('/resetGameNumber', gameController.resetGameNumber);
 router.get('/getPreviousResult/:gameNumber/:shop', gameController.getGameRusult);
 // router.post('/calculate/:gameNumber', gameController.calculateWiningNumbers);
 router.put('/:id', gameController.updateGame);

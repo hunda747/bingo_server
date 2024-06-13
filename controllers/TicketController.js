@@ -171,7 +171,7 @@ const ticketController = {
       // console.log('ticket', ticket.id);
 
 
-      const iswin = isWinner(card, drawnNumbersArray);
+      const iswin = isWinner(card, drawnNumbersArray, currentGame?.gameType);
       if (iswin) {
         await addAdditionalInfoOnGame(currentGame);
         const netwin = (currentGame.totalStake - currentGame.net) / ((currentGame?.winner.length || 0) + 1);
