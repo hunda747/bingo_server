@@ -13,8 +13,17 @@ const slipRoutes = require('./routes/slipsRoutes');
 const dailyReports = require('./routes/dailyReportRoutes');
 const errorHandler = require('./middleware/errorHandlerMiddleware');
 
+var schedule = require('node-schedule');
 // Use this
 const logger = require('./logger');
+const { generateDailyReport, getCurrentDate } = require('./controllers/DailyReportController');
+
+schedule.scheduleJob({ hour: 23, minute: 48, second: 0, tz: 'Africa/Nairobi' }, async function () {
+  // schedule.scheduleJob({ hour: 22, minute: 52, second: 0, tz: 'Africa/Nairobi' }, async function () {
+  // console.log('The answer to life, the universe, and everything!');
+  const todayData = await generateDailyReport(getCurrentDate());
+  logger.info(`Today report is generated! ${new Date().toLocaleString()}`);
+});
 
 // Middleware to parse JSON requests
 app.use(express.json());

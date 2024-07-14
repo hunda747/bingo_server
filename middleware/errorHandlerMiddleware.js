@@ -7,7 +7,10 @@ function errorHandlerMiddleware(err, req, res, next) {
   console.error(err);
   if (err instanceof UniqueViolationError) {
     if (err.constraint === 'shop_owners_username_unique') {
-      return res.status(400).json({ error: 'Username already taken. Please choose a different one.' });
+      return res.status(400).json({ error: 'Shop Owner Username already taken. Please choose a different one.' });
+    }
+    if (err.constraint === 'shops_username_unique') {
+      return res.status(400).json({ error: 'Shop Username already taken. Please choose a different one.' });
     }
     if (err.constraint === 'username_unique') {
       return res.status(400).json({ error: 'Username already taken. Please choose a different one.' });

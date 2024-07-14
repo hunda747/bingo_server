@@ -71,15 +71,16 @@ class ShopController {
   async updateFromGame(req, res, next) {
     const { id } = req.params;
     const { stake, gameId, rtp, gameType } = req.body;
-    console.log(rtp);
-    if (!gameId || !stake || !id || !rtp) {
+    // console.log(rtp);
+    // || !rtp
+    if (!gameId || !stake || !id) {
       return res.status(404).json({ error: 'Please provide all the required fileds!' })
     }
-    if (rtp < 0 || rtp > 100) {
-      return res.status(404).json({ error: 'RTP must be between 0 to 100!' })
-    }
+    // if (rtp < 0 || rtp > 100) {
+    //   return res.status(404).json({ error: 'RTP must be between 0 to 100!' })
+    // } rtp: rtp,
     try {
-      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake, rtp: rtp, gameType });
+      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake, gameType });
       const updatedGame = await Game.query().findById(gameId).patch({ stake: stake, gameType });
 
       if (updatedShop) {

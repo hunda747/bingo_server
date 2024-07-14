@@ -24,6 +24,7 @@ const createDailyReport = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 function getStartAndEndOfDay(timezoneOffset = 0) {
   const reportDate = new Date().toISOString().substr(0, 10);
   const startOfDay = new Date(`${reportDate}T00:00:00.000Z`);
