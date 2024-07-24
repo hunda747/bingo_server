@@ -166,7 +166,7 @@ const ticketController = {
       // Get the already drawn numbers array
       const drawnNumbersArray = drawnNumbers.map(number => number.number);
       if (ticket.status === 'redeemed') {
-        return res.status(200).json({ message: 'This is a win!', win: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray });
+        return res.status(200).json({ message: 'Congratulation! You have Won', win: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray });
       }
       // console.log('ticket', ticket.id);
 
@@ -188,10 +188,10 @@ const ticketController = {
           number: cartela,
           ticketId: ticket.id
         })
-        return res.status(200).json({ message: 'This is a win!', win: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
+        return res.status(200).json({ message: 'Congratulation! You have Won', win: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
       } else {
         const can = await Slip.query().patchAndFetchById(ticket.id, { status: "blocked", netWinning: 0 });
-        return res.status(200).json({ message: 'This cartela is not a winner', win: false, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
+        return res.status(200).json({ message: 'Sorry. Try again next game', win: false, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
       }
 
     } catch (error) {

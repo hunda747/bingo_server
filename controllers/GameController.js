@@ -109,7 +109,7 @@ const GameController = {
         return res.status(404).json({ error: "Game not found" });
       }
 
-      const tickets = await Slip.query().where({ gameId: game.id });
+      const tickets = await Slip.query().where({ gameId: game.id }).andWhereNot({ status: 'canceled' });
       const totalStake = game.stake * (tickets.length);
       const net = parseInt(totalStake * (game.shop.rtp / 100));
       const updatedGames = await Game.query().findById(gameId).patch({ status: "playing", gameStatingTime: new Date(), totalStake, net }).returning('*');
