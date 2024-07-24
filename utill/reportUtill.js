@@ -13,6 +13,7 @@ const generateShopDateReport = async (shop, reportDate) => {
     // Fetch tickets sold by the shop on the specified date
     const tickets = await Slip.query()
       .where('shopId', shop.id)
+      .whereNot('status', 'canceled')
       .whereRaw('DATE(created_at) = ?', [reportDate])
       .withGraphFetched('game');
     // Calculate report data
