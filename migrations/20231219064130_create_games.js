@@ -18,7 +18,7 @@ exports.up = function (knex) {
     table.timestamp('gameStatingTime');
     table.integer('rtp').notNullable();
     table.string('gameType').notNullable();
-    table.enu('status', ['pending', 'playing', 'done', 'error']).defaultTo('pending');
+    table.enu('status', ['pending', 'playing', 'done', 'canceled', 'error']).defaultTo('pending');
 
     table.timestamps(true, true);
   });

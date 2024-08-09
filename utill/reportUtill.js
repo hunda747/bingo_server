@@ -13,7 +13,7 @@ const generateShopDateReport = async (shop, reportDate) => {
     // Fetch tickets sold by the shop on the specified date
     const tickets = await Slip.query()
       .where('shopId', shop.id)
-      .whereNot('status', 'canceled')
+      // .whereNot('status', 'canceled')
       .whereRaw('DATE(created_at) = ?', [reportDate])
       .withGraphFetched('game');
     // Calculate report data
@@ -25,13 +25,16 @@ const generateShopDateReport = async (shop, reportDate) => {
     let totalRevoked = 0;
 
     tickets.forEach(ticket => {
-      totalStake += parseInt(ticket.game.stake); // Assuming netWinning represents stake
-      if (ticket.status === 'redeemed') {
-        payoutCount++;
-        totalPayout += parseInt(ticket.netWinning);
-      } else if (ticket.status === 'canceled') {
+      if (ticket.status === 'canceled') {
+        totalTickets--;
         revokedCount++;
         totalRevoked += parseInt(ticket.game.stake);
+      } else {
+        totalStake += parseInt(ticket.game.stake); // Assuming netWinning represents stake
+        if (ticket.status === 'redeemed') {
+          payoutCount++;
+          totalPayout += parseInt(ticket.netWinning);
+        }
       }
     });
 
@@ -44,7 +47,7 @@ const generateShopDateReport = async (shop, reportDate) => {
       payoutCount: payoutCount,
       totalPayout: totalPayout,
       totalRevoked: totalRevoked,
-      totalNetBalance: totalStake - totalPayout - totalRevoked
+      totalNetBalance: totalStake - totalPayout
     };
 
     return report;

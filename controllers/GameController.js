@@ -121,6 +121,29 @@ const GameController = {
     }
   },
 
+  cancelGame: async (req, res, next) => {
+    const { gameId } = req.params;
+    try {
+      const game = await Game.query().findById(gameId).withGraphFetched("shop");
+      if (!game) {
+        return res.status(404).json({ error: "Game not found!" });
+      }
+      if (game.status === "pending") {
+        return res.status(404).json({ error: "Game hasn't started yet!" });
+      }
+      if (game.status === "done" || game.status === "canceled") {
+        return res.status(404).json({ error: "Game has ended" });
+      }
+
+      const updatedGames = await Game.query().findById(gameId).patch({ status: "canceled" }).returning('*');
+      const tickets = await Slip.query().where({ gameId: game.id }).patch({ status: 'canceled' });
+
+      res.status(200).json(updatedGames)
+    } catch (error) {
+      next(error);
+    }
+  },
+
   closeGame: async (req, res, next) => {
     const { gameId } = req.params;
     try {
@@ -207,6 +230,12 @@ const GameController = {
       if (game.status === 'done') {
         return res.status(404).json({ error: 'Game is closed!' });
       }
+      if (game.status === 'canceled' || game.status === 'error') {
+        return res.status(404).json({ error: 'Game is canceled!' });
+      }
+      if (game.status === 'pending') {
+        return res.status(404).json({ error: "Game hasn't started!" });
+      }
 
       // Fetch already drawn numbers for the game
       const drawnNumbers = await DrawnNumber.query().where('gameId', gameId);
@@ -253,7 +282,7 @@ const GameController = {
 
       // console.log(lastGame);
       let newGameNumber;
-      if (!lastGame || lastGame.status === 'done' || lastGame.status === 'error') {
+      if (!lastGame || lastGame.status === 'done' || lastGame.status === 'error' || lastGame.status === 'canceled') {
         // await transaction(Game.knex(), async (trx) => {
         let newGameNumber;
         if (!lastGame) {

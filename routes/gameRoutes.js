@@ -16,6 +16,7 @@ router.post('/', gameController.createGame);
 // router.get('/getSpinRecentResult', gameController.getSpinRecentResult);
 router.get('/drawNumberForGame/:gameId', gameController.drawNumberForGame);
 router.get('/activateGame/:gameId', gameController.activateGame);
+router.get('/cancelGame/:gameId', gameController.cancelGame);
 router.get('/closeGame/:gameId', gameController.closeGame);
 router.get('/getCurrentGame/:shopId', gameController.getCurrentGame);
 router.get('/getPreviousResult/:gameNumber/:shop', gameController.getGameRusult);

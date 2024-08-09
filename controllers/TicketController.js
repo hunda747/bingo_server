@@ -146,7 +146,10 @@ const ticketController = {
       // Find the game
       const currentGame = await Game.query().findById(gameId);
       if (!currentGame) {
-        return res.status(404).json({ message: 'Game not found' });
+        return res.status(404).json({ message: 'Game not found!' });
+      }
+      if (currentGame.status === "pending" || currentGame.status === "canceled" || currentGame.status === "error") {
+        return res.status(404).json({ message: 'Game not active!' });
       }
 
       const ticket = await Slip.query().where({ gameId: gameId }).andWhere({ "pickedNumber": cartela.toString() }).andWhereNot({ status: 'canceled' }).first();
