@@ -24,7 +24,7 @@ class Daily_reports extends Model {
       },
       shop: {
         relation: Model.BelongsToOneRelation,
-        filter: query => query.select('id', 'username'),
+        filter: query => query.select('id', 'username', 'currentLimit', 'defaultLimit'),
         modelClass: Shop,
         join: {
           from: 'daily_reports.shopId',

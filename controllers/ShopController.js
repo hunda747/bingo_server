@@ -96,7 +96,7 @@ class ShopController {
 
   async update(req, res, next) {
     const { id } = req.params;
-    const { stake, gameId, rtp, location, shopOwnerId, status, gameType } = req.body;
+    const { stake, gameId, rtp, location, shopOwnerId, status, gameType, currentLimit, defaultLimit } = req.body;
     console.log('game id', gameId);
     try {
       const updatedShopData = {};
@@ -118,11 +118,40 @@ class ShopController {
       if (gameType !== undefined) {
         updatedShopData.gameType = gameType;
       }
+      if (currentLimit !== undefined) {
+        updatedShopData.currentLimit = currentLimit;
+      }
+      if (defaultLimit !== undefined) {
+        updatedShopData.defaultLimit = defaultLimit;
+      }
       const updatedShop = await Shop.query().patchAndFetchById(id, updatedShopData);
 
       if (gameId && stake) {
         const updatedGame = await Game.query().findById(gameId).patch({ stake: stake, gameType: gameType });
       }
+
+      if (updatedShop) {
+        res.json(updatedShop);
+      } else {
+        res.status(404).json({ error: "Shop not found" });
+      }
+    } catch (error) {
+      console.error(error);
+      next(error)
+    }
+  }
+
+  async extendLimit(req, res, next) {
+    const { id } = req.params;
+    const { newLimit } = req.body;
+    if (!id || !newLimit) {
+      return res.status(404).json({ error: 'Please provide all the required fileds!' })
+    }
+
+    try {
+      const updatedShop = await Shop.query().patchAndFetchById(id, {
+        currentLimit: Shop.raw('?? + ?', 'currentLimit', newLimit)
+      });
 
       if (updatedShop) {
         res.json(updatedShop);
@@ -154,7 +183,14 @@ class ShopController {
     const { username, password } = req.body;
 
     try {
-      const admin = await Shop.query().findOne({ username });
+      const admin = await Shop.query().findOne({ username }).withGraphFetched("owner");
+
+      if (admin.status != 'active') {
+        return res.status(401).json({ error: 'Shop is Blocked! Contact admin.' });
+      }
+      if (admin.owner.status != 'active') {
+        return res.status(401).json({ error: 'Shop Owner is Blocked! Contact admin.' });
+      }
 
       if (!admin || !(await bcrypt.compare(password, admin.password))) {
         return res.status(401).json({ error: 'Invalid username or password' });

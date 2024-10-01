@@ -17,6 +17,11 @@ var schedule = require('node-schedule');
 // Use this
 const logger = require('./logger');
 const { generateDailyReport, getCurrentDate } = require('./controllers/DailyReportController');
+const { resetShopLimit } = require('./utill/shopUtill');
+
+schedule.scheduleJob({ hour: 0, minute: 1, second: 10, tz: 'Africa/Nairobi' }, async function () {
+  await resetShopLimit()
+});
 
 schedule.scheduleJob({ hour: 23, minute: 48, second: 0, tz: 'Africa/Nairobi' }, async function () {
   // schedule.scheduleJob({ hour: 22, minute: 52, second: 0, tz: 'Africa/Nairobi' }, async function () {
@@ -24,6 +29,8 @@ schedule.scheduleJob({ hour: 23, minute: 48, second: 0, tz: 'Africa/Nairobi' }, 
   const todayData = await generateDailyReport(getCurrentDate());
   logger.info(`Today report is generated! ${new Date().toLocaleString()}`);
 });
+
+
 
 // Middleware to parse JSON requests
 app.use(express.json());

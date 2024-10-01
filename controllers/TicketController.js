@@ -17,6 +17,7 @@ const GameWinner = require("../models/gameWinner");
 const { addAdditionalInfoOnGame } = require("../utill/gameUtill");
 const Shop = require("../models/shop");
 const { generateShopDateReport } = require("../utill/reportUtill");
+const { getCurrentDate } = require("./DailyReportController");
 
 const SLIPLOCK = 'sliplock';
 
@@ -111,6 +112,21 @@ const ticketController = {
 
     try {
       await transaction(Game.knex(), async (trx) => {
+        const admin = await Shop.query().findById(param.shop).withGraphFetched("owner");
+
+        if (admin.status != 'active') {
+          return res.status(403).json({ error: 'Shop is Blocked! Contact admin.' });
+        }
+        if (admin.owner.status != 'active') {
+          return res.status(403).json({ error: 'Shop Owner is Blocked! Contact admin.' });
+        }
+
+        let { totalTickets, totalStake, totalPayout, totalNetBalance
+        } = await generateShopDateReport(admin, getCurrentDate());
+        if (admin.currentLimit <= totalNetBalance) {
+          return res.status(403).json({ error: 'Cashier limit reached! Contact admin to extend.' });
+        }
+
         // Update the current game with the drawn number
         const currentGame = await Game.query()
           .where("status", "pending")
@@ -362,8 +378,6 @@ const ticketController = {
 
     const today = date ? new Date(date) : new Date();
     const yesterday = subDays(today, 1);
-
-    const formatDate = (date) => format(date, "yyyy-MM-dd HH:mm:ss");
 
     let todayReport = await generateShopDateReport(shop, new Date(today).toISOString().substring(0, 10));
     let yesterdayReport = await generateShopDateReport(shop, new Date(yesterday).toISOString().substring(0, 10));

@@ -44,8 +44,6 @@ const generateDailyReport = async (reportDate, res) => {
       .select("id", "shopOwnerId")
       .withGraphFetched("owner");
 
-    const { startOfDay, endOfDay } = getStartAndEndOfDay(0);
-
     // Loop through each cashier and generate a report
     const dailyReports = await Promise.all(
       shops.map(async (shop) => {

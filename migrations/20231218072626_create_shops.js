@@ -13,6 +13,8 @@ exports.up = function (knex) {
     table.string('location');
     table.integer('rtp').defaultTo(30);
     table.integer('stake').defaultTo(20);
+    table.double('defaultLimit').defaultTo(5000);
+    table.double('currentLimit').defaultTo(5000);
     table.enu('gameType', ['default']).defaultTo('default');
     table.enu('status', ['active', 'inactive', 'pending']).defaultTo('active');
     table.timestamps(true, true);
