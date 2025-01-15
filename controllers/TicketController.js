@@ -138,14 +138,34 @@ const ticketController = {
           return res.status(404).json({ message: "Game Closed." });
         }
 
-        await checkRepeatNumber(trx, currentGame.id, param.pickedNumber, SLIPLOCK)
+        const pickedNumbers = param.pickedNumber; // Assuming this is now an array
+        try {
+          await Promise.all(
+            pickedNumbers.map(async (number) => {
+              await checkRepeatNumber(trx, currentGame.id, number, SLIPLOCK);
+            })
+          );
+        } catch (error) {
+          return res.status(400).json({ error: error.error || "Conflict" })
+        }
 
-        const slip = await Slip.query().insert({
+        const slipData = pickedNumbers.map((number) => ({
           gameId: currentGame.id,
-          pickedNumber: param.pickedNumber,
+          pickedNumber: number,
           shopOwnerId: param.shopOwner,
           shopId: param.shop,
-        });
+        }));
+
+        // const slip = await Slip.query().insert(slipData);
+        for (const number of param.pickedNumber) {
+          await Slip.query().insert({
+            gameId: currentGame.id,
+            pickedNumber: number,
+            shopOwnerId: param.shopOwner,
+            shopId: param.shop,
+          });
+        }
+
         const ticket = await Slip.query().where({ gameId: currentGame.id });
         currentGame.selectedNumbers = ticket.map((tic) => tic.pickedNumber);
         return res.status(201).json(currentGame);
@@ -498,7 +518,7 @@ const checkRepeatNumber = async (trx, gameId, cartela, dblock) => {
 
   if (lockAcquired.length === 0) {
     logger.error(`${dblock} Failed to acquire lock cartela: ${cartela} for game: ${gameId}.`);
-    throw new Error("Conflict detected. Cartela Already select for this game."); // Throw an error to stop execution
+    throw new Error(`Conflict detected. Cartela #${cartela} Already select for this game.`); // Throw an error to stop execution
   } else {
     return true;
   }

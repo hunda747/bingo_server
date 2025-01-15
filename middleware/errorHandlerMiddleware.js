@@ -4,7 +4,7 @@ const logger = require('../logger');
 
 function errorHandlerMiddleware(err, req, res, next) {
   // console.log('handlingt');
-  console.error(err);
+  console.error("EX:", err);
   if (err instanceof UniqueViolationError) {
     if (err.constraint === 'shop_owners_username_unique') {
       return res.status(400).json({ error: 'Shop Owner Username already taken. Please choose a different one.' });
