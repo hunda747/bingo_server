@@ -210,9 +210,9 @@ const ticketController = {
       // console.log('ticket', ticket.id);
 
 
+      await addAdditionalInfoOnGame(currentGame);
       const iswin = isWinner(card, drawnNumbersArray, currentGame?.gameType);
       if (iswin) {
-        await addAdditionalInfoOnGame(currentGame);
         const netwin = (currentGame.totalStake - currentGame.net) / ((currentGame?.winner.length || 0) + 1);
         const can = await Slip.query().patchAndFetchById(ticket.id, { status: "redeemed" });
 
@@ -227,10 +227,10 @@ const ticketController = {
           number: cartela,
           ticketId: ticket.id
         })
-        return res.status(200).json({ message: 'Congratulation! You have Won', win: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
+        return res.status(200).json({ message: 'Congratulation! You have Won', win: true, foundeWinner: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
       } else {
         const can = await Slip.query().patchAndFetchById(ticket.id, { status: "blocked", netWinning: 0 });
-        return res.status(200).json({ message: 'Sorry. Try again next game', win: false, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
+        return res.status(200).json({ message: 'Sorry. Try again next game', win: false, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray, foundeWinner: currentGame.winner.length > 0 ? true : false })
       }
 
     } catch (error) {
