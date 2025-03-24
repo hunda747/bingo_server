@@ -10,6 +10,18 @@ class ShopController {
   async getAll(req, res) {
     try {
       const shops = await Shop.query().withGraphFetched("owner");
+
+      // Convert gameType to array format in each shop
+      shops.forEach(shop => {
+        if (shop.gameType && typeof shop.gameType === 'string') {
+          try {
+            shop.gameType = JSON.parse(shop.gameType);
+          } catch (e) {
+            shop.gameType = [shop.gameType];
+          }
+        }
+      });
+
       res.json(shops);
     } catch (error) {
       console.error(error);
@@ -22,6 +34,15 @@ class ShopController {
     try {
       const shop = await Shop.query().findById(id).withGraphFetched("owner");
       if (shop) {
+        // Convert gameType to array format
+        if (shop.gameType && typeof shop.gameType === 'string') {
+          try {
+            shop.gameType = JSON.parse(shop.gameType);
+          } catch (e) {
+            shop.gameType = [shop.gameType];
+          }
+        }
+
         res.json(shop);
       } else {
         res.status(404).json({ error: "Shop not found" });
@@ -35,9 +56,20 @@ class ShopController {
   async getByShopowner(req, res) {
     const { id } = req.params;
     try {
-      const shop = await Shop.query().where({ shopOwnerId: id }).withGraphFetched("owner");
-      if (shop) {
-        res.json(shop);
+      const shops = await Shop.query().where({ shopOwnerId: id }).withGraphFetched("owner");
+      if (shops) {
+        // Convert gameType to array format in each shop
+        shops.forEach(shop => {
+          if (shop.gameType && typeof shop.gameType === 'string') {
+            try {
+              shop.gameType = JSON.parse(shop.gameType);
+            } catch (e) {
+              shop.gameType = [shop.gameType];
+            }
+          }
+        });
+
+        res.json(shops);
       } else {
         res.status(404).json({ error: "Shop not found" });
       }
@@ -80,10 +112,33 @@ class ShopController {
     //   return res.status(404).json({ error: 'RTP must be between 0 to 100!' })
     // } rtp: rtp,
     try {
-      const updatedShop = await Shop.query().patchAndFetchById(id, { stake: stake, gameType });
-      const updatedGame = await Game.query().findById(gameId).patch({ stake: stake, gameType });
+      // Always stringify arrays, assume client sends arrays
+      const processedGameType = Array.isArray(gameType)
+        ? JSON.stringify(gameType)
+        : JSON.stringify([gameType]);
+
+      const updatedShop = await Shop.query().patchAndFetchById(id, {
+        stake: stake,
+        gameType: processedGameType
+      });
+      console.log(gameId);
+      console.log(processedGameType);
+      const updatedGame = await Game.query().patchAndFetchById(gameId, {
+        stake: stake,
+        gameType: processedGameType
+      });
+      console.log(updatedGame);
 
       if (updatedShop) {
+        // Parse gameType back to array before sending response
+        if (updatedShop.gameType && typeof updatedShop.gameType === 'string') {
+          try {
+            updatedShop.gameType = JSON.parse(updatedShop.gameType);
+          } catch (e) {
+            updatedShop.gameType = [updatedShop.gameType];
+          }
+        }
+
         res.json(updatedShop);
       } else {
         res.status(404).json({ error: "Shop not found" });
@@ -116,7 +171,10 @@ class ShopController {
         updatedShopData.status = status;
       }
       if (gameType !== undefined) {
-        updatedShopData.gameType = gameType;
+        // Simply stringify arrays, assume client sends arrays
+        updatedShopData.gameType = Array.isArray(gameType)
+          ? JSON.stringify(gameType)
+          : JSON.stringify([gameType]);
       }
       if (currentLimit !== undefined) {
         updatedShopData.currentLimit = currentLimit;
@@ -127,10 +185,23 @@ class ShopController {
       const updatedShop = await Shop.query().patchAndFetchById(id, updatedShopData);
 
       if (gameId && stake) {
-        const updatedGame = await Game.query().findById(gameId).patch({ stake: stake, gameType: gameType });
+        const gameUpdateData = { stake: stake };
+        if (updatedShopData.gameType !== undefined) {
+          gameUpdateData.gameType = updatedShopData.gameType;
+        }
+        const updatedGame = await Game.query().findById(gameId).patch(gameUpdateData);
       }
 
       if (updatedShop) {
+        // Parse gameType back to array before sending response
+        if (updatedShop.gameType && typeof updatedShop.gameType === 'string') {
+          try {
+            updatedShop.gameType = JSON.parse(updatedShop.gameType);
+          } catch (e) {
+            updatedShop.gameType = [updatedShop.gameType];
+          }
+        }
+
         res.json(updatedShop);
       } else {
         res.status(404).json({ error: "Shop not found" });
@@ -194,6 +265,15 @@ class ShopController {
 
       if (!admin || !(await bcrypt.compare(password, admin.password))) {
         return res.status(401).json({ error: 'Invalid username or password' });
+      }
+
+      // Parse gameType to array before sending
+      if (admin.gameType && typeof admin.gameType === 'string') {
+        try {
+          admin.gameType = JSON.parse(admin.gameType);
+        } catch (e) {
+          admin.gameType = [admin.gameType];
+        }
       }
 
       // Generate tokens upon successful login

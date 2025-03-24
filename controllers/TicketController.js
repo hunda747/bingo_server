@@ -207,13 +207,43 @@ const ticketController = {
       if (ticket.status === 'redeemed') {
         return res.status(200).json({ message: 'Congratulation! You have Won', win: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray });
       }
-      // console.log('ticket', ticket.id);
-
 
       await addAdditionalInfoOnGame(currentGame);
-      const iswin = isWinner(card, drawnNumbersArray, currentGame?.gameType);
-      if (iswin) {
-        const netwin = (currentGame.totalStake - currentGame.net) / ((currentGame?.winner.length || 0) + 1);
+
+      // Parse gameType to array if needed
+      let gameTypes = [];
+      if (typeof currentGame.gameType === 'string') {
+        try {
+          gameTypes = JSON.parse(currentGame.gameType);
+          // Handle double-encoded strings
+          if (typeof gameTypes === 'string' && gameTypes.startsWith('[')) {
+            gameTypes = JSON.parse(gameTypes);
+          }
+        } catch (e) {
+          gameTypes = [currentGame.gameType];
+        }
+      } else if (Array.isArray(currentGame.gameType)) {
+        gameTypes = currentGame.gameType;
+      } else {
+        gameTypes = [currentGame.gameType]; // Fallback to single type
+      }
+
+      // Check the card against each game type pattern
+      // Modified to return early once a winning pattern is found
+      let isWinningTicket = false;
+      let winningPattern = null;
+
+      for (const gameType of gameTypes) {
+        const winResult = isWinner(card, drawnNumbersArray, gameType);
+        if (winResult) {
+          isWinningTicket = true;
+          winningPattern = gameType;
+          break; // Exit the loop as soon as a winning pattern is found
+        }
+      }
+
+      if (isWinningTicket) {
+        const netwin = (currentGame.totalStake - currentGame.net) / ((currentGame?.winner?.length || 0) + 1);
         const can = await Slip.query().patchAndFetchById(ticket.id, { status: "redeemed" });
 
         const tickets = await Slip.query()
@@ -226,16 +256,33 @@ const ticketController = {
           gameId: gameId,
           number: cartela,
           ticketId: ticket.id
-        })
-        return res.status(200).json({ message: 'Congratulation! You have Won', win: true, foundeWinner: true, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray })
+        });
+
+        return res.status(200).json({
+          message: 'Congratulation! You have Won',
+          win: true,
+          winningPattern: winningPattern,
+          foundeWinner: true,
+          card: card,
+          cartelaNo: cartela,
+          drawnNumbers: drawnNumbersArray,
+          winningPatterns: [winningPattern] // Return the winning pattern as an array for backwards compatibility
+        });
       } else {
         const can = await Slip.query().patchAndFetchById(ticket.id, { status: "blocked", netWinning: 0 });
-        return res.status(200).json({ message: 'Sorry. Try again next game', win: false, card: card, cartelaNo: cartela, drawnNumbers: drawnNumbersArray, foundeWinner: currentGame.winner.length > 0 ? true : false })
+        return res.status(200).json({
+          message: 'Sorry. Try again next game',
+          win: false,
+          card: card,
+          cartelaNo: cartela,
+          drawnNumbers: drawnNumbersArray,
+          foundeWinner: currentGame.winner?.length > 0 ? true : false
+        });
       }
 
     } catch (error) {
       console.log(error);
-      next();
+      next(error);
     }
   },
 

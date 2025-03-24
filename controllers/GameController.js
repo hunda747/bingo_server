@@ -43,6 +43,8 @@ const GameController = {
       const games = await query.limit(30).orderBy('gameNumber', 'desc').withGraphFetched("shop");
       await Promise.all(games.map(async (game) => {
         await addAdditionalInfoOnGame(game);
+        // Clean parse the gameType
+        game.gameType = parseGameType(game.gameType);
       }));
 
       res.json(games);
@@ -61,6 +63,9 @@ const GameController = {
 
       // Attach the fetched drawnNumbers to the game object
       await addAdditionalInfoOnGame(game);
+
+      // Clean parse the gameType
+      game.gameType = parseGameType(game.gameType);
       res.json(game);
     } catch (error) {
       next(error);
@@ -84,7 +89,37 @@ const GameController = {
         }
         const shop = await Shop.query().findById(shopId);
         await checkRepeatNumber(trx, shopId, newGameNumber, BINGOLOCK);
-        const newGame = await Game.query().insert({ gameNumber: newGameNumber, shopId, stake: shop.stake, rtp: shop.rtp, gameType: shop.gameType });
+
+        // Store gameType as JSON - simpler approach to avoid double encoding
+        let gameTypes = shop.gameType;
+        // If input is already a JSON string, parse it first to prevent double encoding
+        if (typeof gameTypes === 'string' && (gameTypes.startsWith('[') || gameTypes.startsWith('{'))) {
+          try {
+            gameTypes = JSON.parse(gameTypes);
+          } catch (e) {
+            // If parsing fails, leave as is
+          }
+        }
+
+        // Convert to array if needed
+        if (!Array.isArray(gameTypes)) {
+          gameTypes = [gameTypes];
+        }
+
+        // Convert to JSON string for storage
+        const gameTypeJson = JSON.stringify(gameTypes);
+
+        const newGame = await Game.query().insert({
+          gameNumber: newGameNumber,
+          shopId,
+          stake: shop.stake,
+          rtp: shop.rtp,
+          gameType: gameTypeJson
+        });
+
+        // Parse the gameType for the response
+        newGame.gameType = parseGameType(newGame.gameType);
+
         res.send(newGame);
       })
     } catch (error) {
@@ -189,7 +224,25 @@ const GameController = {
     }
 
     if (updatedGameData.hasOwnProperty("gameType")) {
-      updateQuery.gameType = updatedGameData.gameType;
+      // Simplify the gameType processing
+      let gameTypes = updatedGameData.gameType;
+
+      // If input is already a JSON string, parse it first
+      if (typeof gameTypes === 'string' && (gameTypes.startsWith('[') || gameTypes.startsWith('{'))) {
+        try {
+          gameTypes = JSON.parse(gameTypes);
+        } catch (e) {
+          // If parsing fails, treat as a single value
+        }
+      }
+
+      // Ensure it's an array
+      if (!Array.isArray(gameTypes)) {
+        gameTypes = [gameTypes];
+      }
+
+      // Store as JSON string
+      updateQuery.gameType = JSON.stringify(gameTypes);
     }
 
     try {
@@ -199,6 +252,8 @@ const GameController = {
       }
 
       await addAdditionalInfoOnGame(updatedGame)
+      // Parse gameType before sending response
+      updatedGame.gameType = parseGameType(updatedGame.gameType);
       res.json(updatedGame);
     } catch (error) {
       next(error);
@@ -280,10 +335,8 @@ const GameController = {
     try {
       const lastGame = await getLastGamePlayed(shopId);
 
-      // console.log(lastGame);
-      let newGameNumber;
       if (!lastGame || lastGame.status === 'done' || lastGame.status === 'error' || lastGame.status === 'canceled') {
-        // await transaction(Game.knex(), async (trx) => {
+        // Create a new game
         let newGameNumber;
         if (!lastGame) {
           newGameNumber = 100;
@@ -291,21 +344,111 @@ const GameController = {
           newGameNumber = (lastGame.gameNumber + 1);
         }
         const shop = await Shop.query().findById(shopId);
-        // await checkRepeatNumber(trx, shopId, newGameNumber, BINGOLOCK);
-        const newGame = await Game.query().insert({ gameNumber: newGameNumber, shopId, stake: shop.stake, rtp: shop.rtp, gameType: shop.gameType });
+
+        // First get shop's gameType as clean array
+        let gameTypesArray = [];
+        console.log(shop.gameType);
+        try {
+          // If it's a string representation, parse it
+          if (typeof shop.gameType === 'string') {
+            // Try to parse, but handle corrupted JSON
+            try {
+              let parsed = JSON.parse(shop.gameType);
+              gameTypesArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+              // If parsing fails, use string directly
+              gameTypesArray = [shop.gameType];
+            }
+          } else if (Array.isArray(shop.gameType)) {
+            gameTypesArray = shop.gameType;
+          } else {
+            gameTypesArray = [shop.gameType || ''];
+          }
+        } catch (e) {
+          // Fallback to default
+          gameTypesArray = [];
+        }
+
+        // Clean the array to ensure valid strings only
+        gameTypesArray = gameTypesArray
+          .filter(item => item !== null && item !== undefined)
+          .map(item => {
+            if (typeof item === 'string') {
+              // Remove any invalid characters that might cause JSON issues
+              return item.replace(/["\\]/g, '');
+            }
+            return String(item);
+          });
+
+        if (gameTypesArray.length === 0) {
+          gameTypesArray = [''];
+        }
+
+        // Create the new game with clean JSON
+        const newGame = await Game.query().insert({
+          gameNumber: newGameNumber,
+          shopId,
+          stake: shop.stake,
+          rtp: shop.rtp,
+          gameType: JSON.stringify(gameTypesArray) // Store as clean JSON string
+        });
+
+        // Create a clean response object
+        const gameResponse = {
+          ...newGame,
+          gameType: gameTypesArray // Use the clean array directly
+        };
 
         const cards = cardData.map((card, index) => ({ no: (index + 1), card }));
-        return res.status(200).json({ message: "active", game: newGame, stage: 'pending', cartela: cards });
-        // })
-        // return res.status(200).json({ error: "No active game found!", stage: 'new', lastWinner: lastGame?.winner, lastCard: card, betAmount: lastGame?.shop?.stake });
-      } else if (lastGame.status === 'playing') {
+        return res.status(200).json({
+          message: "active",
+          game: gameResponse,
+          stage: 'pending',
+          cartela: cards
+        });
+      } else if (lastGame.status === 'playing' || lastGame.status === 'pending') {
         await addAdditionalInfoOnGame(lastGame);
 
-        return res.status(200).json({ error: "Last game didn't finish", stage: 'playing', game: lastGame });
-      } else if (lastGame.status === 'pending') {
-        await addAdditionalInfoOnGame(lastGame);
-        const cards = cardData.map((card, index) => ({ no: (index + 1), card }));
-        return res.status(200).json({ message: "active", game: lastGame, stage: 'pending', cartela: cards });
+        // Handle potentially corrupted gameType string
+        let gameTypesArray = [];
+        console.log(lastGame.gameType);
+        if (typeof lastGame.gameType === 'string') {
+          // For corrupted JSON, extract values using regex or simple string operations
+          // Try normal parsing, with fallback
+          try {
+            let parsed = JSON.parse(lastGame.gameType);
+            gameTypesArray = Array.isArray(parsed) ? parsed : [parsed];
+          } catch (e) {
+            // If parsing fails completely, use as is
+            gameTypesArray = [lastGame.gameType.replace(/[\[\]"\\]/g, '')];
+          }
+        } else if (Array.isArray(lastGame.gameType)) {
+          gameTypesArray = lastGame.gameType;
+        } else {
+          gameTypesArray = ['']; // Default
+        }
+
+        // Create a new response object with clean gameType
+        const gameResponse = {
+          ...lastGame,
+          gameType: gameTypesArray
+        };
+
+        if (lastGame.status === 'playing') {
+          return res.status(200).json({
+            error: "Last game didn't finish",
+            stage: 'playing',
+            game: gameResponse
+          });
+        } else {
+          const cards = cardData.map((card, index) => ({ no: (index + 1), card }));
+          return res.status(200).json({
+            message: "active",
+            game: gameResponse,
+            stage: 'pending',
+            cartela: cards
+          });
+        }
       }
       return res.status(400).json({ error: "Unknown stage!" });
     } catch (error) {
@@ -341,6 +484,8 @@ const GameController = {
       }
       await Promise.all(result.map(async (game) => {
         await addAdditionalInfoOnGame(game);
+        // Clean parse the gameType
+        game.gameType = parseGameType(game.gameType);
       }));
 
       res.status(200).json(result);
@@ -390,28 +535,37 @@ const GameController = {
 
       let resultObject = null;
       if (!Array.isArray(drawn)) {
-        // console.log("draw", drawn);
+        // Parse gameType cleanly to get first item
+        let gameType = currentGame.gameType;
+        const parsedTypes = parseGameType(gameType);
+        gameType = parsedTypes.length > 0 ? parsedTypes[0] : '';
+
         resultObject = {
           err: "false",
-          0: currentGame.gameType,
+          0: gameType,
           ...drawnNumber?.reduce((acc, number, index) => {
             acc[index + 1] = number;
             return acc;
           }, {}) || drawnNumber,
           21: currentGame.gameNumber,
-          22: currentGame.gameNumber, // Assuming gameId is what you want for "21" and "22"
+          22: currentGame.gameNumber,
         };
       } else {
         // console.log("draw", drawnNumber);
         const winc = determineAllWinners(drawnNumber);
+        // Same clean parsing for gameType
+        let gameType = currentGame.gameType;
+        const parsedTypes = parseGameType(gameType);
+        gameType = parsedTypes.length > 0 ? parsedTypes[0] : '';
+
         resultObject = {
           err: 'false',
           1: drawnNumber,
           2: (winc.color),
           3: (winc.oddEven),
           21: currentGame.gameNumber,
-          22: currentGame.gameNumber, // Assuming gameId is what you want for "21" and "22"
-          0: currentGame.gameType,
+          22: currentGame.gameNumber,
+          0: gameType,
         }
       }
       res.status(200).send(resultObject);
@@ -513,6 +667,46 @@ const getTodayDate = () => {
     ('0' + currentDate.getDate()).slice(-2);
 }
 
+// Add this helper function at the module level, outside any controller method
+const parseGameType = (gameType) => {
+  if (!gameType) return [];
+
+  try {
+    // Handle cases where gameType might be double-encoded or already an array
+    if (typeof gameType === 'string') {
+      // Try to parse the string as JSON
+      const parsed = JSON.parse(gameType);
+
+      // Check if the parsed result is another string that looks like JSON
+      if (typeof parsed === 'string' && (parsed.startsWith('[') || parsed.startsWith('{'))) {
+        try {
+          // Try to parse again (handles double encoding)
+          return JSON.parse(parsed);
+        } catch (e) {
+          return [parsed];
+        }
+      }
+      // If parsed result is an array, return it
+      else if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      // If parsed result is not an array, wrap it in an array
+      else {
+        return [parsed];
+      }
+    }
+    // If gameType is already an array, return it
+    else if (Array.isArray(gameType)) {
+      return gameType;
+    }
+
+    // Default case - if nothing else worked
+    return [gameType];
+  } catch (e) {
+    // If parsing fails, return original as a single-item array
+    return [gameType];
+  }
+};
 
 module.exports = GameController;
 

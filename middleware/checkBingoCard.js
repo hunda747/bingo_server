@@ -5,10 +5,11 @@ function isWinner(cardData, drawnNumbers, gameType) {
   // console.log("drawNumbers", drawnNumbers);
   // console.log("option", gameType);
   const pattern = "corner";
+  console.log('gameType', gameType);
 
   // Check which pattern to validate
   switch (gameType) {
-    case '1 Line' || '2 Line' || '3 Line':
+    case 'Line1' || 'Line2' || 'Line3':
       return checkLines(cardData, drawnNumbers, gameType);
     case 'tshape':
       return checkTShape(cardData, drawnNumbers);
@@ -28,7 +29,7 @@ function isWinner(cardData, drawnNumbers, gameType) {
 }
 
 function checkLines(cardData, drawnNumbers, gameType) {
-  const line = Option[gameType] || 2;
+  const line = Option[gameType];
   const { horizontalCount, verticalCount, mainDiagonalCount, secondaryDiagonalCount } = getWinningRows(cardData, drawnNumbers, line);
 
   // Check for combinations
