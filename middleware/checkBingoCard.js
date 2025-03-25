@@ -6,7 +6,6 @@ function isWinner(cardData, drawnNumbers, gameType) {
   // console.log("option", gameType);
   const pattern = "corner";
   console.log('gameType', gameType);
-
   // Check which pattern to validate
   switch (gameType) {
     case 'Line1' || 'Line2' || 'Line3':
@@ -23,6 +22,16 @@ function isWinner(cardData, drawnNumbers, gameType) {
       return checkStarShape(cardData, drawnNumbers);
     case 'corner':
       return checkCornerShape(cardData, drawnNumbers);
+    case 'butterfly':
+      return checkButterflyShape(cardData, drawnNumbers);
+    case 'airplane':
+      return checkAirplaneShape(cardData, drawnNumbers);
+    case 'diamond':
+      return checkDiamondShape(cardData, drawnNumbers);
+    case 'arrow':
+      return checkArrowShape(cardData, drawnNumbers);
+    case 'heart':
+      return checkHeartShape(cardData, drawnNumbers);
     default:
       return checkLines(cardData, drawnNumbers, gameType);
   }
@@ -214,6 +223,141 @@ function checkCornerShape(cardData, drawnNumbers) {
   return true;
 }
 
+function checkButterflyShape(cardData, drawnNumbers) {
+  // Check B and O columns (only first and last positions)
+  if (!drawnNumbers.includes(cardData['B'][0]) ||
+    !drawnNumbers.includes(cardData['B'][4]) ||
+    !drawnNumbers.includes(cardData['O'][0]) ||
+    !drawnNumbers.includes(cardData['O'][4])) {
+    return false;
+  }
+
+  // Check I, N, G columns (all positions except first and last)
+  for (let letter of ['I', 'N', 'G']) {
+    for (let i = 1; i < 4; i++) {
+      let num = cardData[letter][i];
+      // Account for free space in the middle
+      if (!drawnNumbers.includes(num) && !(letter === 'N' && i === 2 && num === null)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function checkAirplaneShape(cardData, drawnNumbers) {
+  // Check B and O columns (only 4th row - index 3)
+  if (!drawnNumbers.includes(cardData['B'][3]) ||
+    !drawnNumbers.includes(cardData['O'][3])) {
+    return false;
+  }
+
+  // Check I and G columns (only 1st and 4th rows - indices 0 and 3)
+  if (!drawnNumbers.includes(cardData['I'][0]) ||
+    !drawnNumbers.includes(cardData['I'][3]) ||
+    !drawnNumbers.includes(cardData['G'][0]) ||
+    !drawnNumbers.includes(cardData['G'][3])) {
+    return false;
+  }
+
+  // Check N column (all positions)
+  for (let i = 0; i < 5; i++) {
+    let num = cardData['N'][i];
+    // Account for free space in the middle
+    if (!drawnNumbers.includes(num) && !(i === 2 && num === null)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function checkDiamondShape(cardData, drawnNumbers) {
+  // Check B and O columns (only 3rd row - index 2)
+  if (!drawnNumbers.includes(cardData['B'][2]) ||
+    !drawnNumbers.includes(cardData['O'][2])) {
+    return false;
+  }
+
+  // Check I and G columns (2nd, 3rd, and 4th rows - indices 1, 2, and 3)
+  for (let letter of ['I', 'G']) {
+    for (let i = 1; i <= 3; i++) {
+      let num = cardData[letter][i];
+      if (!drawnNumbers.includes(num)) {
+        return false;
+      }
+    }
+  }
+
+  // Check N column (all positions)
+  for (let i = 0; i < 5; i++) {
+    let num = cardData['N'][i];
+    // Account for free space in the middle
+    if (!drawnNumbers.includes(num) && !(i === 2 && num === null)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function checkArrowShape(cardData, drawnNumbers) {
+  // Check B and O columns (only 3rd row - index 2)
+  if (!drawnNumbers.includes(cardData['B'][2]) ||
+    !drawnNumbers.includes(cardData['O'][2])) {
+    return false;
+  }
+
+  // Check I and G columns (only 2nd row - index 1)
+  if (!drawnNumbers.includes(cardData['I'][1]) ||
+    !drawnNumbers.includes(cardData['G'][1])) {
+    return false;
+  }
+
+  // Check N column (all positions)
+  for (let i = 0; i < 5; i++) {
+    let num = cardData['N'][i];
+    // Account for free space in the middle
+    if (!drawnNumbers.includes(num) && !(i === 2 && num === null)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function checkHeartShape(cardData, drawnNumbers) {
+  // Check B and O columns (1st, 2nd, and 3rd rows - indices 0, 1, 2)
+  for (let letter of ['B', 'O']) {
+    for (let i = 0; i <= 2; i++) {
+      if (!drawnNumbers.includes(cardData[letter][i])) {
+        return false;
+      }
+    }
+  }
+
+  // Check I and G columns (1st and 4th rows - indices 0, 3)
+  for (let letter of ['I', 'G']) {
+    if (!drawnNumbers.includes(cardData[letter][0]) ||
+      !drawnNumbers.includes(cardData[letter][3])) {
+      return false;
+    }
+  }
+
+  // Check N column (2nd, 3rd, and 5th rows - indices 1, 2, 4)
+  const nIndices = [1, 2, 4];
+  for (let i of nIndices) {
+    let num = cardData['N'][i];
+    // Account for free space in the middle
+    if (!drawnNumbers.includes(num) && !(i === 2 && num === null)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 const getWinningRows = (cardData, drawnNumbers, line) => {
   console.log("line", line);
   let horizontalCount = 0;
@@ -287,5 +431,4 @@ const getWinningRows = (cardData, drawnNumbers, line) => {
 }
 
 // console.log(isWinner(cardData, drawnNumbers)); // Output: true (this card is a winner with 1 horizontal and 1 vertical line)
-module.exports = { isWinner };
 module.exports = { isWinner };

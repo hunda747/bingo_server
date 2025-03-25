@@ -7,7 +7,12 @@ const Option = {
   'H shape': "hshape",
   'U shape': "ushape",
   'Star': "star",
-  'Corner': "corner"
+  'Corner': "corner",
+  'Butterfly': "butterfly",
+  'Airplane': "airplane",
+  'Diamond': "diamond",
+  'Arrow': "arrow",
+  'Heart': "heart"
 }
 
 module.exports = { Option }

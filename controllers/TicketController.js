@@ -257,6 +257,7 @@ const ticketController = {
           number: cartela,
           ticketId: ticket.id
         });
+        console.log("winningPattern", winningPattern);
 
         return res.status(200).json({
           message: 'Congratulation! You have Won',
