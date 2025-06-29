@@ -30,6 +30,8 @@ function isWinner(cardData, drawnNumbers, gameType) {
       return checkDiamondShape(cardData, drawnNumbers);
     case 'arrow':
       return checkArrowShape(cardData, drawnNumbers);
+          case 'square':
+      return checkSquareAroundFreeSpace(cardData, drawnNumbers);
     case 'heart':
       return checkHeartShape(cardData, drawnNumbers);
     default:
@@ -326,6 +328,50 @@ function checkArrowShape(cardData, drawnNumbers) {
 
   return true;
 }
+
+
+function checkSquareAroundFreeSpace(cardData, drawnNumbers) {
+  // The free space is at cardData['N'][2] which is usually null
+  //  four adjacent positions around it:
+  // top: N[1]
+  // bottom: N[3]
+  // left: I[2]
+  // right: G[2]
+
+  // Check top
+  if (!drawnNumbers.includes(cardData['N'][1])) {
+    return false;
+  }
+
+  // Check bottom
+  if (!drawnNumbers.includes(cardData['N'][3])) {
+    return false;
+  }
+
+  // Check left
+  if (!drawnNumbers.includes(cardData['I'][2])) {
+    return false;
+  }
+
+  // Check right
+  if (!drawnNumbers.includes(cardData['G'][2])) {
+    return false;
+  }
+
+  // All four squares around free space are marked
+  return true;
+}
+
+function checkHeartShape(cardData, drawnNumbers) {
+  // Check B and O columns (1st, 2nd, and 3rd rows - indices 0, 1, 2)
+  for (let letter of ['B', 'O']) {
+    for (let i = 0; i <= 2; i++) {
+      if (!drawnNumbers.includes(cardData[letter][i])) {
+        return false;
+      }
+    }
+  }
+
 
 function checkHeartShape(cardData, drawnNumbers) {
   // Check B and O columns (1st, 2nd, and 3rd rows - indices 0, 1, 2)
