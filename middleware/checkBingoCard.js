@@ -30,7 +30,7 @@ function isWinner(cardData, drawnNumbers, gameType) {
       return checkDiamondShape(cardData, drawnNumbers);
     case 'arrow':
       return checkArrowShape(cardData, drawnNumbers);
-          case 'square':
+    case 'square':
       return checkSquareAroundFreeSpace(cardData, drawnNumbers);
     case 'heart':
       return checkHeartShape(cardData, drawnNumbers);
