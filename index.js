@@ -1,4 +1,10 @@
 // index.js
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://admin.rockbingogame.com', 
+  credentials: true
+}));
+
 
 const express = require('express');
 const app = express();
