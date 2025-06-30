@@ -1,11 +1,3 @@
-// index.js
-const cors = require('cors');
-app.use(cors({
-  origin: 'https://admin.rockbingogame.com', 
-  credentials: true
-}));
-
-
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -22,21 +14,28 @@ const errorHandler = require('./middleware/errorHandlerMiddleware');
 var schedule = require('node-schedule');
 // Use this
 const logger = require('./logger');
-const { generateDailyReport, getCurrentDate } = require('./controllers/DailyReportController');
+const {
+  generateDailyReport,
+  getCurrentDate,
+} = require('./controllers/DailyReportController');
 const { resetShopLimit } = require('./utill/shopUtill');
 
-schedule.scheduleJob({ hour: 0, minute: 1, second: 10, tz: 'Africa/Nairobi' }, async function () {
-  await resetShopLimit()
-});
+schedule.scheduleJob(
+  { hour: 0, minute: 1, second: 10, tz: 'Africa/Nairobi' },
+  async function () {
+    await resetShopLimit();
+  }
+);
 
-schedule.scheduleJob({ hour: 23, minute: 48, second: 0, tz: 'Africa/Nairobi' }, async function () {
-  // schedule.scheduleJob({ hour: 22, minute: 52, second: 0, tz: 'Africa/Nairobi' }, async function () {
-  // console.log('The answer to life, the universe, and everything!');
-  const todayData = await generateDailyReport(getCurrentDate());
-  logger.info(`Today report is generated! ${new Date().toLocaleString()}`);
-});
-
-
+schedule.scheduleJob(
+  { hour: 23, minute: 48, second: 0, tz: 'Africa/Nairobi' },
+  async function () {
+    // schedule.scheduleJob({ hour: 22, minute: 52, second: 0, tz: 'Africa/Nairobi' }, async function () {
+    // console.log('The answer to life, the universe, and everything!');
+    const todayData = await generateDailyReport(getCurrentDate());
+    logger.info(`Today report is generated! ${new Date().toLocaleString()}`);
+  }
+);
 
 // Middleware to parse JSON requests
 app.use(express.json());
@@ -53,7 +52,7 @@ app.use('/game', gameRoutes);
 app.use('/slip', slipRoutes);
 app.use('/dailyReport', dailyReports);
 
-app.use(errorHandler)
+app.use(errorHandler);
 
 // Create HTTPS server
 const PORT = process.env.PORT || 8700;
