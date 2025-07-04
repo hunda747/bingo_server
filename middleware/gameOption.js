@@ -10,6 +10,7 @@ const Option = {
   'Corner': "corner",
   'Butterfly': "butterfly",
   'Airplane': "airplane",
+  'Square': "square",
   'Diamond': "diamond",
   'Arrow': "arrow",
   'Heart': "heart"
