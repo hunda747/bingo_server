@@ -32,6 +32,8 @@ function isWinner(cardData, drawnNumbers, gameType) {
       return checkArrowShape(cardData, drawnNumbers);
     case 'square':
       return checkSquareAroundFreeSpace(cardData, drawnNumbers);
+    case 'fullcorner':
+      return checkFullCorner(cardData, drawnNumbers);
     case 'heart':
       return checkHeartShape(cardData, drawnNumbers);
     default:
@@ -395,6 +397,33 @@ function checkSquareAroundFreeSpace(cardData, drawnNumbers) {
   // All four squares around free space are marked
   return true;
 }
+
+
+
+function checkFullCorner(cardData, drawnNumbers) {
+  // Four corners are:
+  // Top-left:    cardData['B'][0]
+  // Top-right:   cardData['O'][0]
+  // Bottom-left: cardData['B'][4]
+  // Bottom-right:cardData['O'][4]
+
+  const topLeft = cardData['B'][0];
+  const topRight = cardData['O'][0];
+  const bottomLeft = cardData['B'][4];
+  const bottomRight = cardData['O'][4];
+
+  // Check each corner
+  if (!drawnNumbers.includes(topLeft)) return false;
+  if (!drawnNumbers.includes(topRight)) return false;
+  if (!drawnNumbers.includes(bottomLeft)) return false;
+  if (!drawnNumbers.includes(bottomRight)) return false;
+
+  // All four corners are marked
+  return true;
+}
+
+
+
 
 function checkHeartShape(cardData, drawnNumbers) {
   // Check B and O columns (1st, 2nd, and 3rd rows - indices 0, 1, 2)
