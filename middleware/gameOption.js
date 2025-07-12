@@ -11,8 +11,7 @@ const Option = {
   'Butterfly': "butterfly",
   'Airplane': "airplane",
   'Square': "square",
-    'Fullcorner': 'fullcorner',
-
+  'Fullcorner': 'fullcorner',
   'Diamond': "diamond",
   'Arrow': "arrow",
   
