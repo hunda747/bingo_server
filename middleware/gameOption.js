@@ -14,7 +14,6 @@ const Option = {
   'Fullcorner': 'fullcorner',
   'Diamond': "diamond",
   'Arrow': "arrow",
-  
   'Heart': "heart"
 }
 
