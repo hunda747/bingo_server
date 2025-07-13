@@ -36,6 +36,8 @@ function isWinner(cardData, drawnNumbers, gameType) {
       return checkFullCorner(cardData, drawnNumbers);
     case 'heart':
       return checkHeartShape(cardData, drawnNumbers);
+    case 'fullcard':
+      return checkFullCard(cardData, drawnNumbers);
     default:
       return checkLines(cardData, drawnNumbers, gameType);
   }
@@ -421,6 +423,22 @@ function checkFullCorner(cardData, drawnNumbers) {
   // All four corners are marked
   return true;
 }
+
+function checkFullCard(cardData, drawnNumbers) {
+  for (const column in cardData) {
+    for (let row = 0; row < cardData[column].length; row++) {
+      // Skip the center FREE space (usually N[2])
+      if (column === 'N' && row === 2) continue;
+
+      const number = cardData[column][row];
+      if (!drawnNumbers.includes(number)) {
+        return false; // Found a number that hasn't been drawn
+      }
+    }
+  }
+  return true; // All numbers (except free space) are marked
+}
+
 
 
 
