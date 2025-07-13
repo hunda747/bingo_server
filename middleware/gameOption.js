@@ -14,7 +14,9 @@ const Option = {
   'Fullcorner': 'fullcorner',
   'Diamond': "diamond",
   'Arrow': "arrow",
-  'Heart': "heart"
+  'Heart': "heart",
+  'Fullcard':"fullcard"
+  
 }
 
 module.exports = { Option }
