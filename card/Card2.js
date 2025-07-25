@@ -1,5 +1,4 @@
-
-[
+const cardData2 =[
   {
     "cartela": 1,
     "grid": [
